@@ -27,9 +27,11 @@ AquesTalk を実際の製品で利用する場合は、[株式会社アクエス
 ```
 .
 ├── src/main.rs                     # CLIバイナリ
+├── src/index.ts                    # npm/wasm エントリポイント
 ├── crates/
     ├── aqkanji2koe/                # コアライブラリ (rlib)
-    └── aqkanji2koe-capi/           # C ABI ラッパー (cdylib + staticlib)
+    ├── aqkanji2koe-capi/           # C ABI ラッパー (cdylib + staticlib)
+    └── aqkanji2koe-wasm/           # WebAssembly ラッパー (wasm-bindgen)
 ```
 
 ## CLIツール
@@ -81,6 +83,77 @@ println!("{roman}"); // nihonngono/te'_kisutode_su.
 ```
 
 `AqKanji2Koe` は `Send + Sync` なので `Arc` 等で複数スレッドから共有できます。
+
+## npm / WebAssembly (`kanji2koe-openjtalk`)
+
+ブラウザと Node.js の両方で使える ESM パッケージです。
+
+### インストール
+
+```sh
+npm install kanji2koe-openjtalk
+```
+
+### Kanji2Koe の使い方
+
+```ts
+import { load, type Kanji2Koe } from "kanji2koe-openjtalk";
+
+const kanji2koe: Kanji2Koe = await load();
+
+const kana = kanji2koe.convert("日本語のテキストです。");
+console.log(kana); // にほんごの/て'_キすとで_ス。
+
+const roman = kanji2koe.convertRoman("日本語のテキストです。");
+console.log(roman); // nihonngono/te'_kisutode_su.
+```
+
+`load()` は wasm の初期化後に変換器インスタンスを返します。Node.js では同梱 wasm をファイルとして読み込み、ブラウザでは `import.meta.url` から wasm URL を解決します。CDN や別パスから wasm を配信する場合は `load({ wasmPath })` を指定できます。
+
+### aquestalk.js と組み合わせて読み上げる
+
+`kanji2koe-openjtalk` はテキストを AquesTalk 音声記号列に変換します。実際に音声合成する場合は [`aquestalk.js`](https://www.npmjs.com/package/aquestalk.js) に変換結果を渡します。
+
+```sh
+npm install kanji2koe-openjtalk aquestalk.js
+```
+
+```ts
+import { load as loadKanji2Koe, type Kanji2Koe } from "kanji2koe-openjtalk";
+import { load as loadAquesTalk, type AquesTalk } from "aquestalk.js";
+
+const kanji2koe: Kanji2Koe = await loadKanji2Koe();
+const talk: AquesTalk = await loadAquesTalk("f1", {
+  memorySize: 1024 * 1024 * 1024,
+});
+
+const text = "今日は良い天気ですね。";
+const koe = kanji2koe.convert(text);
+const wav = talk.run(koe, 100);
+
+// Browser: 再生
+const bytes = new ArrayBuffer(wav.byteLength);
+new Uint8Array(bytes).set(wav);
+const blob = new Blob([bytes], { type: "audio/wav" });
+const url = URL.createObjectURL(blob);
+const audio = new Audio(url);
+await audio.play();
+URL.revokeObjectURL(url);
+
+await talk.destroy();
+```
+
+ブラウザでの再生・WAV ダウンロードを含むサンプルは `docs-src/` にあります。
+
+### 公開前確認
+
+```sh
+npm run smoke
+npm run pack:dry
+npm run docs:build
+```
+
+`npm run smoke` は build 後に Node.js で `convert()` と `convertRoman()` の簡易動作確認を行います。`npm run pack:dry` で npm tarball に `dist/`, `pkg/`, `README.md`, `LICENSE` が含まれることを確認できます。
 
 ## C ABI ライブラリ (`aqkanji2koe-capi`)
 

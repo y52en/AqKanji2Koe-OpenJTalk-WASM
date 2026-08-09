@@ -1,3 +1,10 @@
 /.claude
 /specs
 /target
+.env
+/dist
+/pkg
+/node_modules
+/docs-src/dist
+/docs-src/node_modules
+/docs-src/tsconfig.tsbuildinfo

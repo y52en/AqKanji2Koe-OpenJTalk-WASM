@@ -1,0 +1,43 @@
+{
+  "name": "kanji2koe-openjtalk",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "OpenJTalk/jpreprocess based Japanese text to AquesTalk phoneme notation converter for WebAssembly",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "pkg",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "npm run build:wasm && tsc",
+    "build:wasm": "wasm-pack build crates/aqkanji2koe-wasm --target web --release --out-dir ../../pkg && node scripts/prepare-wasm-package.mjs",
+    "docs:install": "npm --prefix docs-src install",
+    "docs:build": "npm run build && npm --prefix docs-src install && npm --prefix docs-src run build",
+    "docs:dev": "npm run build && npm --prefix docs-src install && npm --prefix docs-src run dev -- --host 0.0.0.0",
+    "smoke": "npm run build && node test/smoke.mjs",
+    "pack:dry": "npm pack --dry-run"
+  },
+  "devDependencies": {
+    "@types/node": "^24.2.0",
+    "typescript": "^5.9.2",
+    "wasm-pack": "^0.15.0"
+  },
+  "keywords": [
+    "openjtalk",
+    "jpreprocess",
+    "aquestalk",
+    "wasm",
+    "japanese"
+  ],
+  "license": "MIT"
+}

@@ -1,0 +1,16 @@
+.env
+/.claude
+/specs
+/target
+/node_modules
+
+/crates
+/include
+/scripts
+/src
+/test
+
+/AGENTS.md
+/CLAUDE.md
+/Cargo.lock
+/Cargo.toml
