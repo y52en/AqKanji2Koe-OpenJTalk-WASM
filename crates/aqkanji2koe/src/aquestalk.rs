@@ -68,9 +68,10 @@ fn take_delimiter(input: &str) -> Option<(&'static str, usize)> {
 fn take_devoiced(input: &str) -> Option<(&'static str, &'static str, usize)> {
     DEVOICED_READINGS
         .iter()
+        .copied()
         .filter(|(rendered, _)| input.starts_with(*rendered))
         .max_by_key(|(rendered, _)| rendered.len())
-        .map(|(rendered, normal)| (*rendered, *normal, rendered.len()))
+        .map(|(rendered, normal)| (rendered, normal, rendered.len()))
 }
 
 fn take_reading(input: &str) -> Option<(&'static str, usize)> {
@@ -240,13 +241,15 @@ pub(crate) fn sanitize_kana(input: &str) -> Result<String, String> {
         }
 
         if rest.starts_with('\'') {
-            let Some(last) = phrase.last_mut() else {
+            if phrase.is_empty() {
                 return Err("アクセント記号の前に読み記号がありません".to_string());
-            };
+            }
             if phrase.iter().any(|token| token.accent_after) {
                 return Err("1つのアクセント句に複数のアクセント記号があります".to_string());
             }
-            last.accent_after = true;
+            if let Some(last) = phrase.last_mut() {
+                last.accent_after = true;
+            }
             rest = &rest[1..];
             continue;
         }
