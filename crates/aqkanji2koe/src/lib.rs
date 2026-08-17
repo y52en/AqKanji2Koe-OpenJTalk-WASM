@@ -24,6 +24,7 @@
 //! println!("ローマ字: {roman}");
 //! ```
 
+mod aquestalk;
 pub mod converter;
 pub mod error;
 pub mod mora;
@@ -104,16 +105,21 @@ impl AqKanji2Koe {
 
     fn convert_with_format(&self, text: &str, format: OutputFormat) -> Result<String> {
         let nodes = (self.process)(text)?;
-        Ok(nodes_to_phoneme(&nodes, format))
+        let phonemes = nodes_to_phoneme(&nodes, format);
+        if format == OutputFormat::Kana {
+            aquestalk::sanitize_kana(&phonemes).map_err(Error::Processing)
+        } else {
+            Ok(phonemes)
+        }
     }
 
     /// 漢字かな交じりテキストを **かな音声記号列** (UTF-8) に変換する。
     ///
     /// 出力例: `"これわ/おんせ'ーきごーです。"`
     ///
-    /// # Errors
-    ///
-    /// jpreprocess の処理に失敗した場合に [`Error::Processing`] を返す。
+    /// AquesTalk 1.8 の未定義読み・禁止された読み並びを DLL に渡さないよう、
+    /// 出力直前に検証と安全な正規化を行う。1アクセント句が長すぎる場合は
+    /// 勝手に分割せず [`Error::Processing`] を返す。
     pub fn convert(&self, text: &str) -> Result<String> {
         self.convert_with_format(text, OutputFormat::Kana)
     }
