@@ -1,0 +1,19 @@
+name: Agent verification
+
+on:
+  push:
+    branches:
+      - agent/aquestalk-safe-output
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Format check
+        run: cargo fmt --all -- --check
+      - name: Test workspace
+        run: cargo test --workspace
