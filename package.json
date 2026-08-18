@@ -1,6 +1,6 @@
 {
   "name": "kanji2koe-openjtalk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "OpenJTalk/jpreprocess based Japanese text to AquesTalk phoneme notation converter for WebAssembly",
   "main": "./dist/index.js",

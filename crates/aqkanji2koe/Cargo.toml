@@ -1,6 +1,6 @@
 [package]
 name = "aqkanji2koe"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Japanese kanji/kana to AquesTalk phoneme notation converter using jpreprocess/OpenJTalk"
 license = "MIT"
