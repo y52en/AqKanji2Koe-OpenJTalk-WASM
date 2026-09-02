@@ -9,5 +9,6 @@ license = "MIT"
 crate-type = ["rlib"]
 
 [dependencies]
+e2k = { git = "https://github.com/sevenc-nanashi/e2k-rs", rev = "55c3aed2093d7dd78e9ea1945cca7801ece6ea46", package = "e2k" }
 jpreprocess = { version = "0.13", features = ["naist-jdic"] }
 thiserror = "2"

@@ -128,6 +128,15 @@ fn build_items(nodes: &[NodeData]) -> Vec<Item> {
             continue;
         }
 
+        // 口語的な長音の連続は jpreprocess で独立ノードになることがある。
+        // 直前の語へつなぎ、先頭など伸ばす対象がない場合だけ捨てる。
+        if node.pron_moras.iter().all(|(mora, _)| mora == "ー") {
+            if !cur_moras.is_empty() {
+                cur_moras.extend(node.pron_moras.iter().cloned());
+            }
+            continue;
+        }
+
         if !node.chain_with_prev || cur_moras.is_empty() {
             flush_phrase(&mut items, &mut cur_moras, cur_accent);
             cur_accent = node.accent;
@@ -411,5 +420,16 @@ mod tests {
         let nodes = [spoken_node(&[("ッ", true), ("キ", false)], 0, false)];
 
         assert_eq!(nodes_to_phoneme(&nodes, OutputFormat::Roman), "k_ki.");
+    }
+
+    #[test]
+    fn standalone_prolonged_sounds_extend_the_previous_phrase() {
+        let nodes = [
+            spoken_node(&[("カ", true)], 0, false),
+            spoken_node(&[("ー", true), ("ー", true)], 0, false),
+        ];
+
+        assert_eq!(nodes_to_phoneme(&nodes, OutputFormat::Kana), "かーー。");
+        assert_eq!(nodes_to_phoneme(&nodes, OutputFormat::Roman), "ka--.");
     }
 }

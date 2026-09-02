@@ -26,6 +26,7 @@
 
 mod aquestalk;
 pub mod converter;
+mod english;
 pub mod error;
 pub mod mora;
 pub mod phoneme;
@@ -34,6 +35,7 @@ pub use converter::OutputFormat;
 pub use error::{Error, Result};
 
 use converter::{nodes_to_phoneme, NodeData};
+use e2k::C2k;
 use jpreprocess::kind::JPreprocessDictionaryKind;
 use jpreprocess::{JPreprocess, SystemDictionaryConfig};
 
@@ -59,11 +61,13 @@ impl AqKanji2Koe {
             .map_err(|e| Error::Init(e.to_string()))?;
 
         let jp = JPreprocess::with_dictionaries(system, None);
+        let english_to_katakana = C2k::new(64);
 
         let process = Box::new(move |text: &str| -> Result<Vec<NodeData>> {
+            let normalized_text = english::katakanize_ascii_words(text, &english_to_katakana);
             // preprocess() でアクセント句連結と無声化フラグを確定させる。
             let mut njd = jp
-                .text_to_njd(text)
+                .text_to_njd(&normalized_text)
                 .map_err(|e| Error::Processing(e.to_string()))?;
             njd.preprocess();
 
@@ -106,6 +110,9 @@ impl AqKanji2Koe {
     fn convert_with_format(&self, text: &str, format: OutputFormat) -> Result<String> {
         let nodes = (self.process)(text)?;
         let phonemes = nodes_to_phoneme(&nodes, format);
+        if matches!(phonemes.as_str(), "。" | ".") {
+            return Ok(String::new());
+        }
         if format == OutputFormat::Kana {
             aquestalk::sanitize_kana(&phonemes).map_err(Error::Processing)
         } else {
@@ -139,5 +146,54 @@ impl AqKanji2Koe {
 impl std::fmt::Debug for AqKanji2Koe {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("AqKanji2Koe").finish_non_exhaustive()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::AqKanji2Koe;
+
+    #[test]
+    fn noisy_and_colloquial_inputs_convert_without_errors() {
+        let converter = AqKanji2Koe::new().unwrap();
+        let inputs = [
+            " 基本的な動作確認 ",
+            " (sample value) ",
+            "  ",
+            " ☆彡 おはようー ",
+            " 今日は晴れだねーまたねー ",
+            " ケーキーーー！！！ ",
+            " 学校へ行くよーーーー ",
+            " 明日も会おうねーーーー ",
+            " 記号wサンプル できたよーー ",
+            " Hello world ",
+        ];
+
+        for input in inputs {
+            converter
+                .convert(input)
+                .unwrap_or_else(|error| panic!("かな変換に失敗: {input:?}: {error}"));
+            converter
+                .convert_roman(input)
+                .unwrap_or_else(|error| panic!("ローマ字変換に失敗: {input:?}: {error}"));
+        }
+    }
+
+    #[test]
+    fn empty_and_symbol_only_inputs_return_empty_output() {
+        let converter = AqKanji2Koe::new().unwrap();
+
+        assert_eq!(converter.convert("").unwrap(), "");
+        assert_eq!(converter.convert("  ").unwrap(), "");
+        assert_eq!(converter.convert("!!!").unwrap(), "");
+        assert_eq!(converter.convert_roman("  ").unwrap(), "");
+    }
+
+    #[test]
+    fn english_words_are_katakanized_before_analysis() {
+        let converter = AqKanji2Koe::new().unwrap();
+
+        let kana = converter.convert("constants").unwrap();
+        assert_eq!(kana, "こん_スた'んつ。");
     }
 }
